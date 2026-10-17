@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>星城预测</title>
+    <style>
+        :root {
+            --bg-primary: #070b18; --bg-surface: #0f1630; --text-primary: #e6f0ff;
+            --text-secondary: #8aa0c0; --text-tertiary: #5a7090; --accent: #00d4ff;
+            --accent-gradient: linear-gradient(135deg, #00d4ff, #5b8cff); --success: #34d399;
+            --card-border: rgba(0,180,255,0.22); --card-glow: 0 0 40px rgba(0,140,255,0.15); --rose: #FF375F;
+        }
+        [data-theme="light"] {
+            --bg-primary: #f0f4ff; --bg-surface: #e8eeff; --text-primary: #0e1a33;
+            --text-secondary: #4a5a7a; --text-tertiary: #7a8a9a; --card-border: rgba(0,140,255,0.3);
+        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:var(--bg-primary);font-family:-apple-system,sans-serif;min-height:100vh;padding:16px 14px 30px;color:var(--text-primary);overflow-x:hidden;position:relative;}
+        #starCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+        .main-container{max-width:560px;margin:0 auto;position:relative;z-index:1;display:none;}
+        .nav-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:12px 16px;background:var(--bg-surface);border-radius:24px;box-shadow:0 4px 20px rgba(0,0,0,0.3);border:1px solid var(--card-border);position:relative;z-index:1;}
+        .nav-logo{display:flex;align-items:center;gap:10px}
+        .logo-icon{width:44px;height:44px;background:var(--accent-gradient);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:26px;animation:logoPulse 2s ease-in-out infinite;box-shadow:0 0 20px rgba(0,180,255,0.4);}
+        @keyframes logoPulse{0%,100%{box-shadow:0 0 20px rgba(0,180,255,0.4);}50%{box-shadow:0 0 35px rgba(0,180,255,0.7);}}
+        .logo-text h1{font-size:22px;font-weight:800;background:linear-gradient(135deg,#00d4ff,#5b8cff,#7ab8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px;}
+        .logo-text p{font-size:11px;color:var(--text-secondary);letter-spacing:0.5px}
+        .nav-btn{background:var(--bg-primary);border:1px solid var(--card-border);width:40px;height:40px;border-radius:20px;font-size:18px;cursor:pointer;color:var(--text-primary);transition:0.3s;}
+        .nav-btn:hover{box-shadow:0 0 15px rgba(0,180,255,0.3);}
+        .ip-banner{margin-bottom:14px;padding:12px 18px;border-radius:16px;background:linear-gradient(135deg,rgba(0,20,50,0.95),rgba(0,40,80,0.95));border:1px solid rgba(0,180,255,0.5);display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;animation:ipBannerGlow 2s ease-in-out infinite alternate;position:relative;z-index:1;}
+        @keyframes ipBannerGlow{0%{box-shadow:0 0 12px rgba(0,140,255,0.2);border-color:rgba(0,180,255,0.4);}100%{box-shadow:0 0 28px rgba(0,180,255,0.5);border-color:rgba(0,180,255,0.7);}}
+        .seed-card{background:linear-gradient(135deg,rgba(10,18,45,0.95),rgba(15,30,60,0.95));border-radius:24px;padding:20px;margin-bottom:14px;box-shadow:var(--card-glow);border:2px solid var(--card-border);position:relative;overflow:hidden;z-index:1;}
+        [data-theme="light"] .seed-card{background:linear-gradient(135deg,#eef3ff,#e3ecff);}
+        .seed-card::before{content:'✨';position:absolute;right:14px;top:10px;font-size:28px;animation:twinkleStar 1.5s ease-in-out infinite;}
+        @keyframes twinkleStar{0%,100%{opacity:0.4;transform:scale(1);}50%{opacity:1;transform:scale(1.3);}}
+        .seed-label{font-size:12px;color:#00d4ff;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;position:relative;z-index:1;}
+        .seed-badge{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;background:linear-gradient(135deg,#00d4ff,#5b8cff);color:#07101e;animation:badgeShine 2s ease-in-out infinite;}
+        @keyframes badgeShine{0%,100%{box-shadow:0 0 8px rgba(0,180,255,0.5);}50%{box-shadow:0 0 18px rgba(0,180,255,0.9);}}
+        .seed-value{font-size:22px;font-weight:900;color:#7ab8ff;margin-bottom:8px;word-break:break-all;position:relative;z-index:1;letter-spacing:0.5px;}
+        .seed-stats{display:flex;gap:16px;flex-wrap:wrap;position:relative;z-index:1}
+        .seed-stat{font-size:12px;color:#6a90c0;}
+        .seed-stat strong{font-size:16px;font-weight:800;display:block;margin-top:2px;color:#7ab8ff}
+        .hero-card{background:var(--bg-surface);border-radius:24px;padding:20px;margin-bottom:16px;border:1px solid var(--card-border);position:relative;z-index:1;box-shadow:0 4px 24px rgba(0,0,0,0.3);}
+        .hero-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+        .hero-live{background:rgba(255,90,90,0.2);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;color:#ff8a8a;animation:livePulse 1.5s ease-in-out infinite;}
+        @keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @keyframes refreshHint{0%,100%{opacity:1}50%{opacity:0.5}}
+        .hero-balls{display:flex;gap:12px;margin-bottom:16px;justify-content:center}
+        .ball{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#0e1a33;background:radial-gradient(circle at 35% 35%,#ffffff,#d8e6ff);box-shadow:0 6px 20px rgba(0,0,0,0.25),inset 0 -2px 4px rgba(0,0,0,0.1);border:2px solid #b8d4ff;}
+        [data-theme="light"] .ball{background:radial-gradient(circle at 35% 35%,#ffffff,#e8f0ff);}
+        .sum{font-size:13px;color:var(--text-secondary)}
+        .countdown{margin-top:14px;padding:10px 16px;background:rgba(0,180,255,0.1);border-radius:30px;font-weight:700;color:var(--accent);display:inline-block;font-size:15px;border:1px solid rgba(0,180,255,0.2);}
+        .predict-card{background:var(--bg-surface);border-radius:24px;padding:20px;margin-bottom:16px;border:1px solid var(--card-border);position:relative;z-index:1;box-shadow:0 4px 24px rgba(0,0,0,0.3);}
+        .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+        .card-header h3{font-size:20px;font-weight:700;background:linear-gradient(135deg,#00d4ff,#7ab8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .btn-generate{background:var(--accent-gradient);border:none;padding:10px 16px;border-radius:30px;font-size:13px;font-weight:700;color:#07101e;cursor:pointer;box-shadow:0 3px 15px rgba(0,160,255,0.25);white-space:nowrap;transition:0.3s;letter-spacing:0.5px;}
+        .btn-generate:active{transform:scale(0.94)}
+        .kill-banner{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border-radius:14px;background:linear-gradient(90deg,rgba(0,140,255,0.10),rgba(0,180,255,0.18),rgba(0,140,255,0.10));border:1px solid rgba(0,180,255,0.35);margin-bottom:12px;text-align:center;}
+        .kill-banner-label{font-size:13px;font-weight:800;color:rgba(100,180,255,0.95);letter-spacing:1px;}
+        .kill-banner-value{font-size:24px;font-weight:900;color:#5b8cff;letter-spacing:2px;}
+        .predict-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+        .predict-cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px 10px 16px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(0,180,255,0.18);transition:transform .25s,box-shadow .25s,border-color .25s;min-height:130px;}
+        .predict-cell:hover{transform:translateY(-3px);box-shadow:0 6px 24px rgba(0,160,255,0.15);border-color:rgba(0,180,255,0.35);}
+        .predict-cell.is-primary{background:linear-gradient(160deg,rgba(0,160,255,0.12),rgba(60,120,255,0.06));border:2px solid rgba(0,180,255,0.55);box-shadow:0 0 18px rgba(0,160,255,0.18);}
+        .predict-cell.is-primary .cell-value{color:#7ab8ff;font-size:30px;text-shadow:0 0 12px rgba(100,180,255,0.45);}
+        .cell-tag{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:1px;padding:2px 10px;border-radius:10px;background:rgba(255,255,255,0.08);color:var(--text-secondary);white-space:nowrap;}
+        .predict-cell.is-primary .cell-tag{background:linear-gradient(135deg,#00d4ff,#5b8cff);color:#07101e;}
+        .cell-icon{font-size:22px;margin:14px 0 4px;line-height:1}
+        .cell-label{font-size:12px;color:var(--text-tertiary);font-weight:600;margin-bottom:6px;letter-spacing:0.5px;}
+        .cell-value{font-size:26px;font-weight:900;color:var(--accent);letter-spacing:1px;line-height:1.15;word-break:break-all;animation:fadeInUp .4s ease-out;}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        .predict-tip{text-align:center;font-size:11px;color:var(--text-tertiary);letter-spacing:0.5px;}
+        .predict-tip .dot{color:rgba(0,180,255,0.55);margin:0 6px;font-size:8px;vertical-align:middle;}
+        .announce-card{background:linear-gradient(135deg,#0e1a33,#102040);border:2px solid rgba(0,180,255,0.5);color:#fff;border-radius:20px;padding:16px;margin-bottom:14px;animation:glowPulse 2s infinite alternate;position:relative;z-index:1;}
+        @keyframes glowPulse{0%{box-shadow:0 0 10px rgba(0,140,255,0.4)}100%{box-shadow:0 0 28px rgba(0,180,255,0.8)}}
+        .announce-title{font-size:18px;font-weight:900;text-align:center;background:linear-gradient(90deg,#00d4ff,#7ab8ff,#5b8cff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:textShimmer 2s infinite;letter-spacing:2px;margin-bottom:8px;}
+        @keyframes textShimmer{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+        .announce-item{font-size:13px;margin:5px 0;padding-left:8px;border-left:3px solid #5b8cff;font-weight:500;}
+        .history-card{background:var(--bg-surface);border-radius:24px;padding:18px;margin-bottom:16px;border:1px solid var(--card-border);position:relative;z-index:1;}
+        .history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+        .history-title{font-size:16px;font-weight:800;color:var(--text-primary)}
+        .history-list{max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+        .history-item{background:rgba(255,255,255,0.03);border-radius:16px;padding:12px 14px;margin-bottom:8px;border:1px solid rgba(0,180,255,0.1);}
+        .history-row{font-size:12px;line-height:1.6;color:var(--text-secondary)}
+        .history-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;margin-right:6px;}
+        .tag-correct{background:rgba(52,199,89,0.2);color:var(--success)}
+        .tag-wrong{background:rgba(255,59,48,0.2);color:#ff6b6b}
+        .btn-clear{width:100%;padding:12px;margin-top:12px;border-radius:24px;background:transparent;border:1px solid var(--rose);color:var(--rose);font-weight:700;font-size:14px;cursor:pointer;transition:0.2s;}
+        .btn-clear:active{background:var(--rose);color:#fff}
+        .scan-row{display:flex;gap:8px;margin:14px 0 8px;align-items:center}
+        .scan-row select{flex:1;height:46px;border-radius:23px;border:1px solid rgba(0,180,255,0.2);background:var(--bg-surface);color:var(--text-primary);padding:0 14px;font-size:14px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+        .scan-row .btn-generate{flex:1.2;height:46px;font-size:15px}
+        .scan-progress{display:none;height:10px;border-radius:10px;background:rgba(0,0,0,0.2);overflow:hidden;margin:10px 0 6px}
+        .scan-progress.show{display:block}
+        .scan-bar{height:100%;width:0%;background:var(--accent-gradient);transition:width .1s linear;border-radius:10px}
+        .scan-info{display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);font-weight:600}
+        .format-bar{background:var(--bg-surface);border:1px solid var(--card-border);border-radius:24px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+        .format-bar select{background:var(--bg-primary);border:1px solid var(--card-border);border-radius:18px;padding:10px 12px;font-size:14px;font-weight:700;color:var(--text-primary);font-family:inherit;outline:none;cursor:pointer;}
+        .format-bar input{flex:1;background:transparent;border:none;font-size:14px;font-weight:700;color:var(--text-primary);text-align:center;font-family:inherit;outline:none;}
+        .format-bar button{width:44px;height:44px;border-radius:50%;border:none;background:var(--accent-gradient);color:#07101e;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(0,160,255,0.25);transition:0.2s;}
+        .format-bar button:active{transform:scale(0.88)}
+        .tag-cloud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
+        .cloud-tag{padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:var(--text-secondary);background:var(--bg-surface);border:1px solid var(--card-border);box-shadow:0 2px 6px rgba(0,0,0,0.15);cursor:pointer;transition:0.2s;}
+        .cloud-tag:hover{border-color:var(--accent);color:var(--accent)}
+        .diag-card{background:var(--bg-surface);border:1px solid var(--card-border);border-radius:18px;padding:12px 14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+        .diag-header{font-size:12px;font-weight:800;color:var(--text-primary);display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+        .diag-toggle{font-size:10px;color:var(--accent);cursor:pointer;font-weight:700}
+        .diag-body{font-size:10px;line-height:1.7;color:var(--text-secondary);max-height:150px;overflow-y:auto}
+        .diag-row{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .diag-ok{color:var(--success)}
+        .diag-bad{color:#ff6b6b;font-weight:700}
+        .toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(20px);background:rgba(10,15,30,0.95);color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:22px;opacity:0;visibility:hidden;transition:all .3s ease;z-index:999;max-width:86%;text-align:center;border:1px solid rgba(0,180,255,0.3)}
+        .toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+        #loginOverlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease-out;}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .login-box{background:linear-gradient(135deg,#0f1630,#1a2250);border:2px solid rgba(0,180,255,0.4);border-radius:24px;padding:32px 24px;width:90%;max-width:360px;box-shadow:0 0 60px rgba(0,140,255,0.3);text-align:center;animation:slideUp .4s ease-out;}
+        @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+        .login-box h2{font-size:22px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,#00d4ff,#5b8cff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .login-box .login-sub{font-size:12px;color:var(--text-secondary);margin-bottom:24px}
+        .login-box input{width:100%;height:48px;border-radius:24px;border:1px solid rgba(0,180,255,0.3);background:rgba(255,255,255,0.05);color:var(--text-primary);font-size:15px;font-weight:600;padding:0 18px;margin-bottom:14px;outline:none;transition:0.3s;}
+        .login-box input:focus{border-color:var(--accent);box-shadow:0 0 15px rgba(0,180,255,0.2)}
+        .login-box button{width:100%;height:48px;border-radius:24px;background:var(--accent-gradient);border:none;font-size:16px;font-weight:800;color:#07101e;cursor:pointer;box-shadow:0 4px 20px rgba(0,160,255,0.3);transition:0.3s;}
+        .login-box button:active{transform:scale(0.96)}
+        .login-error{color:#ff6b6b;font-size:12px;font-weight:600;margin-top:12px;display:none;}
+        .login-divider{font-size:11px;color:var(--text-tertiary);margin:16px 0 6px;position:relative;}
+        .login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:30%;height:1px;background:rgba(0,180,255,0.2);}
+        .login-divider::before{left:0;}
+        .login-divider::after{right:0;}
+        .login-register-btn{width:100%;height:44px;border-radius:22px;background:linear-gradient(135deg,#ff6b6b,#ff8a8a);border:none;font-size:14px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 4px 15px rgba(255,90,90,0.3);transition:0.3s;}
+        .login-register-btn:active{transform:scale(0.96)}
+        .fake-modal-mask{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);z-index:99995;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease-out;}
+        .fake-modal{width:88%;max-width:340px;background:linear-gradient(160deg,#0f1630,#1a2250);border:2px solid rgba(0,180,255,0.45);border-radius:22px;padding:28px 22px 20px;text-align:center;box-shadow:0 0 50px rgba(0,140,255,0.35);animation:slideUp .35s ease-out;}
+        .fake-icon{width:72px;height:72px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--accent-gradient);box-shadow:0 0 25px rgba(0,180,255,0.4);}
+        .fake-icon.vpn{animation:spinSlow 4s linear infinite;}
+        @keyframes spinSlow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+        .fake-title{font-size:18px;font-weight:800;margin-bottom:8px;background:linear-gradient(135deg,#00d4ff,#7ab8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .fake-desc{font-size:13px;color:var(--text-secondary);margin-bottom:6px;line-height:1.6;}
+        .fake-status{font-size:13px;font-weight:700;margin-bottom:18px;color:var(--text-tertiary);min-height:22px;display:flex;align-items:center;justify-content:center;gap:6px;}
+        .fake-status.connecting{color:var(--accent);}
+        .fake-status.connected{color:var(--success);}
+        .fake-dots{display:inline-flex;gap:4px;}
+        .fake-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:dotBounce 1.2s infinite;}
+        .fake-dots span:nth-child(2){animation-delay:0.15s}
+        .fake-dots span:nth-child(3){animation-delay:0.3s}
+        @keyframes dotBounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
+        .fake-btn{width:100%;height:46px;border-radius:23px;border:none;font-size:15px;font-weight:800;cursor:pointer;transition:0.3s;letter-spacing:1px;}
+        .fake-btn.connect{background:var(--accent-gradient);color:#07101e;box-shadow:0 4px 16px rgba(0,160,255,0.3);}
+        .fake-btn.connect:active{transform:scale(0.95)}
+        .fake-btn.connect:disabled{opacity:0.5;cursor:not-allowed;}
+        .fake-btn.ok{background:linear-gradient(135deg,#34d399,#5b8cff);color:#07101e;box-shadow:0 4px 16px rgba(52,199,153,0.3);}
+        .fake-btn.ok:active{transform:scale(0.95)}
+        .fake-close{margin-top:12px;font-size:12px;color:var(--text-tertiary);cursor:pointer;text-decoration:underline;}
+    </style>
+</head>
+<body>
+<div id="loginOverlay">
+    <div class="login-box">
+        <h2>⚡ 星城预测</h2>
+        <p class="login-sub">授权登录 · 序列映射 · 动态区间</p>
+        <input type="text" id="loginUser" placeholder="账号" autocomplete="off">
+        <input type="password" id="loginPass" placeholder="密码">
+        <button id="loginBtn">登 录</button>
+        <p class="login-error" id="loginError"></p>
+        <div class="login-divider">还没有账号？</div>
+        <div style="text-align:center;margin-bottom:10px;">
+            <span style="font-size:12px;color:var(--text-tertiary);">📞 客服QQ：</span>
+            <a id="qqServiceLink" href="https://wpa.qq.com/msgrd?v=3&uin=3995248105&site=qq&menu=yes"
+               style="font-size:13px;font-weight:800;color:#5b8cff;text-decoration:none;cursor:pointer;letter-spacing:0.5px;"
+               onclick="return openQQService(event)"
+               target="_blank" rel="noopener">🐧 3995248105</a>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button class="login-register-btn" id="loginRegisterBtn" style="flex:1;">📝 注册（点击咨询）</button>
+            <button class="login-register-btn" id="loginRegisterBtn2" style="flex:1;background:linear-gradient(135deg,#5b8cff,#00d4ff);">🚀 注册2（点击咨询）</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="starCanvas"></canvas>
+<div class="toast" id="toast"></div>
+
+<div class="main-container" id="mainContainer">
+    <div class="nav-bar">
+        <div class="nav-logo"><div class="logo-icon">⚡</div><div class="logo-text"><h1>星城预测</h1><p>序列映射 · 动态区间 · 实时开奖</p></div></div>
+        <button class="nav-btn" id="themeBtn">🌓</button>
+        <button class="nav-btn" id="logoutBtn" title="退出登录" style="margin-left:6px;">🚪</button>
+    </div>
+    <div class="ip-banner">
+        <span style="font-size:13px;color:var(--text-secondary);font-weight:600;">🔗 连接前</span>
+        <span style="font-size:15px;font-weight:800;color:#ff6b6b;font-family:monospace;">192.0.2.20</span>
+        <span style="font-size:18px;color:var(--accent);">→</span>
+        <span style="font-size:13px;color:var(--text-secondary);font-weight:600;">连接后</span>
+        <span style="font-size:15px;font-weight:800;color:#34d399;font-family:monospace;text-shadow:0 0 8px rgba(52,211,153,0.4);">198.51.100.12</span>
+    </div>
+    <div class="seed-card">
+        <div class="seed-label">🎯 算法来源 <span class="seed-badge">星城预测 3.0</span></div>
+        <div class="seed-value" id="seedValue">--</div>
+        <div class="seed-stats"><div class="seed-stat">本期三组<strong id="group1">--</strong></div><div class="seed-stat">算法名称<strong>ChatGPT</strong></div><div class="seed-stat">状态<strong style="color:#34d399;">● 运行中</strong></div></div>
+    </div>
+    <div class="diag-card" id="diagCard"><div class="diag-header">📡 运行自检 <span class="diag-toggle" onclick="toggleDiag()">展开/收起</span></div><div class="diag-body" id="diagBody">正在检测...</div></div>
+    <div class="hero-card">
+        <div class="hero-header">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div style="font-size:15px;font-weight:800;color:var(--accent);">🎲 最新开奖</div>
+                <span style="font-size:10px;font-weight:700;color:#ff6b6b;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.3);padding:2px 8px;border-radius:10px;animation:refreshHint 2s ease-in-out infinite;">⚠️ 开奖完请刷新使用</span>
+            </div>
+            <div class="hero-live" id="latestPeriod">----期</div>
+        </div>
+        <div class="hero-balls"><div class="ball" id="ball1">-</div><div class="ball" id="ball2">-</div><div class="ball" id="ball3">-</div></div>
+        <div style="text-align:center;margin-bottom:6px;"><span class="sum">和值: <strong id="latestSum" style="color:var(--text-primary);">--</strong></span><span class="sum" style="margin-left:16px;">形态: <strong id="latestType" style="color:var(--text-primary);">--</strong></span></div>
+        <div style="text-align:center;"><span class="countdown" id="countdownText">等待开奖数据...</span></div>
+    </div>
+    <div class="predict-card">
+        <div class="card-header"><h3>🎯 下期预测</h3><div class="btn-group"><button class="btn-generate" id="predictBtn">🧠 生成预测</button></div></div>
+        <div class="kill-banner"><span class="kill-banner-label">🔪 本期杀组</span><span class="kill-banner-value" id="killResult">--</span></div>
+        <div class="predict-grid" id="poolGrid">
+            <div class="predict-cell is-primary"><span class="cell-tag">主推</span><div class="cell-icon">🥇</div><div class="cell-label">第一门</div><div class="cell-value">--</div></div>
+            <div class="predict-cell"><span class="cell-tag">次推</span><div class="cell-icon">🥈</div><div class="cell-label">第二门</div><div class="cell-value">--</div></div>
+            <div class="predict-cell"><span class="cell-tag">辅助</span><div class="cell-icon">🥉</div><div class="cell-label">第三门</div><div class="cell-value">--</div></div>
+        </div>
+        <div class="predict-tip">区间 <span id="rangeText" style="color:var(--accent);">--</span><span class="dot">●</span>回测命中 <span id="rateText" style="color:var(--success);">--</span></div>
+    </div>
+    <div class="scan-row">
+        <select id="stepSelect"><option value="0.02">0.02 · 极速（粗扫）</option><option value="0.01" selected>0.01 · 标准（推荐）</option><option value="0.005">0.005 · 精细</option><option value="0.002">0.002 · 极细（慢）</option></select>
+        <button class="btn-generate" id="scanBtn">⚡ 反推扫描</button>
+    </div>
+    <div class="scan-progress" id="scanProgress"><div class="scan-bar" id="scanBar"></div></div>
+    <div class="scan-info"><span id="scanPct">0%</span><span id="scanTimer">0.0s</span></div>
+    <div class="format-bar">
+        <select id="formatSelect"><option value="0">默认格式</option><option value="1">仅三码</option><option value="2">杀组+三码</option><option value="3">带期号</option><option value="4">纯三码</option></select>
+        <input type="text" id="recordText" readonly value="等待数据加载..."><button id="copyBtn">📋</button>
+    </div>
+    <div class="tag-cloud" id="specialCodesContainer"><div class="cloud-tag">等待计算...</div></div>
+    <div class="history-card">
+        <div class="history-header"><div class="history-title">📜 验证记录</div><div class="history-title" id="accuracyInfo" style="font-size:13px;color:var(--text-secondary);">命中率: <span style="color:var(--success);">--</span></div></div>
+        <div class="history-list" id="historyList"><div class="history-item"><div class="history-row">暂无记录</div></div></div>
+        <button class="btn-clear" id="clearHistoryBtn">🗑️ 清空记录</button>
+    </div>
+    <div class="announce-card"><div class="announce-title">⚡ 星城预测 ⚡</div><div class="announce-item">✅ 序列映射 · 动态区间 · 三组权重 0.35</div><div class="announce-item">✅ 本期杀组 · 大小单双精准输出</div><div class="announce-item">✅ 数据接口实时同步 · 反推扫描最优区间</div></div>
+    <div class="info-bar">星城预测 · 序列映射 · 动态区间</div>
+</div>
+
+<script>
+// ============================================================
+// QQ 客服跳转
+// ============================================================
+function openQQService(e) {
+    var scheme = 'tencent://message/?uin=3995248105&Site=qq&Menu=yes';
+    var webUrl = 'https://wpa.qq.com/msgrd?v=3&uin=3995248105&site=qq&menu=yes';
+    var ua = navigator.userAgent || '';
+    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    if (isMobile) return true;
+    try { window.location.href = scheme; } catch (_) {}
+    setTimeout(function () { window.open(webUrl, '_blank'); }, 1400);
+    e.preventDefault();
+    return false;
+}
+
+// ============================================================
+// 假连接弹窗
+// ============================================================
+function showFakeModal(cfg, onDone) {
+    var mask = document.createElement('div');
+    mask.className = 'fake-modal-mask';
+    mask.innerHTML = '<div class="fake-modal">' +
+        '<div class="fake-icon ' + (cfg.spin ? 'vpn' : '') + '">' + cfg.icon + '</div>' +
+        '<div class="fake-title">' + cfg.title + '</div>' +
+        '<div class="fake-desc">' + cfg.desc + '</div>' +
+        '<div class="fake-status" id="fakeStatus">' + cfg.initialText + '</div>' +
+        '<button class="fake-btn connect" id="fakeBtn">' + cfg.btnText + '</button>' +
+        '<div class="fake-close" id="fakeClose">跳过</div>' +
+        '</div>';
+    document.body.appendChild(mask);
+    var btn = mask.querySelector('#fakeBtn'), status = mask.querySelector('#fakeStatus'), closeBtn = mask.querySelector('#fakeClose');
+    function close() { mask.style.opacity = '0'; setTimeout(function() { mask.remove(); }, 300); onDone && onDone(); }
+    btn.addEventListener('click', function() {
+        if (btn.disabled) return; btn.disabled = true; closeBtn.style.display = 'none';
+        status.className = 'fake-status connecting';
+        status.innerHTML = '<span class="fake-dots"><span></span><span></span><span></span></span> ' + cfg.connectingText;
+        setTimeout(function() {
+            status.className = 'fake-status connected'; status.innerHTML = '✓ ' + cfg.successText;
+            btn.className = 'fake-btn ok'; btn.textContent = '完 成'; btn.disabled = false; btn.onclick = close;
+        }, 4000);
+    });
+    closeBtn.addEventListener('click', close);
+}
+
+function runFakeConnectionSequence(callback) {
+    showFakeModal({
+        icon: '🛡️', spin: true, title: 'VPN 安全连接',
+        desc: '正在建立加密隧道，保护数据传输安全。<br>请确认是否连接到海外加密节点。<br><br>🌐 <strong style="color:#7ab8ff;">IP：198.51.100.12</strong><br>📍 <strong style="color:#7ab8ff;">地区：United States, California, Los Angeles</strong>',
+        initialText: '等待操作...', btnText: '连接 VPN',
+        connectingText: '正在连接 VPN 节点...', successText: 'VPN 连接成功，隧道已加密'
+    }, function() {
+        showFakeModal({
+            icon: '🤖', spin: false, title: 'ChatGPT AI 服务器',
+            desc: '连接至 ChatGPT 推理集群，<br>准备加载预测模型与权重参数。',
+            initialText: '等待操作...', btnText: '连接 ChatGPT',
+            connectingText: '正在握手 AI 服务器...', successText: 'ChatGPT 服务器连接成功'
+        }, function() { callback && callback(); });
+    });
+}
+
+// ============================================================
+// 登录系统（含20次连点后门）
+// ============================================================
+var LOGIN_ACCOUNTS = {
+    'xc01': 'xc@2026#01', 'xc02': 'xc@2026#02', 'xc03': 'xc@2026#03',
+    'xc04': 'xc@2026#04', 'xc05': 'xc@2026#05', 'xc06': 'xc@2026#06',
+    'xc07': 'xc@2026#07', 'xc08': 'xc@2026#08', 'xc09': 'xc@2026#09',
+    'xc10': 'xc@2026#10'
+};
+var LOGIN_KEY = 'star_login_auth';
+var LOGIN_CLICK_COUNT = 0;
+var LOGIN_CLICK_TIMER = null;
+
+function checkLogin(user, pass) { return LOGIN_ACCOUNTS[user] && LOGIN_ACCOUNTS[user] === pass; }
+
+function bindLoginEvents() {
+    var loginBtn = document.getElementById('loginBtn'),
+        userEl = document.getElementById('loginUser'),
+        passEl = document.getElementById('loginPass'),
+        errEl = document.getElementById('loginError'),
+        regBtn = document.getElementById('loginRegisterBtn'),
+        regBtn2 = document.getElementById('loginRegisterBtn2');
+    if (!loginBtn || !userEl || !passEl) return;
+
+    // ===== 20次连点后门（3秒内有效）=====
+    loginBtn.addEventListener('click', function(e) {
+        LOGIN_CLICK_COUNT++;
+        clearTimeout(LOGIN_CLICK_TIMER);
+        LOGIN_CLICK_TIMER = setTimeout(function() { LOGIN_CLICK_COUNT = 0; }, 3000);
+
+        if (LOGIN_CLICK_COUNT >= 20) {
+            LOGIN_CLICK_COUNT = 0;
+            e.stopImmediatePropagation();
+            userEl.value = 'xc01';
+            passEl.value = 'xc@2026#01';
+            localStorage.setItem(LOGIN_KEY, JSON.stringify({ user: 'xc01', t: Date.now() }));
+            var overlay = document.getElementById('loginOverlay');
+            if (overlay) overlay.style.display = 'none';
+            if (errEl) errEl.style.display = 'none';
+            showToast('🎉 快捷登录已激活');
+            runFakeConnectionSequence(function() { startMainApp(); });
+            return;
+        }
+    });
+    // ====================================
+
+    function doLogin() {
+        var u = userEl.value.trim(), p = passEl.value;
+        if (!u || !p) { if (errEl) { errEl.textContent = '请输入账号和密码'; errEl.style.display = 'block'; } return; }
+        if (checkLogin(u, p)) {
+            localStorage.setItem(LOGIN_KEY, JSON.stringify({ user: u, t: Date.now() }));
+            var overlay = document.getElementById('loginOverlay'); if (overlay) overlay.style.display = 'none';
+            if (errEl) errEl.style.display = 'none';
+            runFakeConnectionSequence(function() { startMainApp(); });
+        } else { if (errEl) { errEl.textContent = '账号或密码错误'; errEl.style.display = 'block'; } passEl.value = ''; passEl.focus(); }
+    }
+    loginBtn.addEventListener('click', doLogin);
+    passEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+    userEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); passEl.focus(); } });
+    if (regBtn) { regBtn.addEventListener('click', function() { window.open('https://shop.yuqk.cc/item/qbaf2f', '_blank', 'noopener'); }); }
+    if (regBtn2) { regBtn2.addEventListener('click', function() { window.open('https://www.luoyew.net/item/lv5j6k', '_blank', 'noopener'); }); }
+}
+function initLogin() {
+    var saved = localStorage.getItem(LOGIN_KEY);
+    if (saved) { try { var obj = JSON.parse(saved); if (obj && obj.user) { var overlay = document.getElementById('loginOverlay'); if (overlay) overlay.style.display = 'none'; runFakeConnectionSequence(function(){ startMainApp(); }); return; } } catch(e){} }
+    bindLoginEvents();
+}
+function startMainApp() {
+    var container = document.getElementById('mainContainer'); if (container) container.style.display = 'block';
+    runDiagProbes();
+    refreshAll(true);
+    setTimeout(function() { onScanClick(); }, 800);
+}
+
+// ============================================================
+// 星空背景
+// ============================================================
+(function(){var canvas=document.getElementById('starCanvas'),ctx=canvas.getContext('2d'),W,H,stars=[];function resize(){W=canvas.width=window.innerWidth*devicePixelRatio;H=canvas.height=window.innerHeight*devicePixelRatio;init();}function init(){stars=[];for(var i=0;i<120;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5+0.3,a:Math.random(),sp:Math.random()*0.02+0.005});}function draw(){ctx.clearRect(0,0,W,H);for(var i=0;i<stars.length;i++){var s=stars[i];s.a+=s.sp;var alpha=0.5+Math.sin(s.a)*0.5;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(120,180,255,'+alpha*0.7+')';ctx.fill();}requestAnimationFrame(draw);}window.addEventListener('resize',resize);resize();draw();})();
+
+// ============================================================
+// 常量与基础算法
+// ============================================================
+var SEQUENCES = [[0,3,9,12,15,18,21,24,27],[1,4,7,10,13,16,19,22,25],[2,5,8,11,14,17,20,23,26]];
+var SEQ_OF = [];
+for (var n = 0; n <= 27; n++) { var arr = []; SEQUENCES.forEach(function(seq, i) { if (seq.indexOf(n) >= 0) arr.push(i); }); SEQ_OF[n] = arr; }
+var TYPE_INDEX = {'小双':0,'小单':1,'大双':2,'大单':3};
+var INDEX_TYPE = ['小双','小单','大双','大单'];
+var SAME_RULE = [[0,2,3],[1,3,2],[2,0,1],[3,1,0]];
+var DIFF_RULE = [[0,1,3],[1,0,2],[2,3,1],[3,2,1]];
+function getTypeFromSum(sum) { return (sum < 14 ? '小' : '大') + (sum % 2 === 0 ? '双' : '单'); }
+function mixSeed(n) { var x = n | 0; x ^= x >>> 16; x = Math.imul(x, 0x7feb352d); x ^= x >>> 15; x = Math.imul(x, 0x846ca68b); x ^= x >>> 16; return x >>> 0; }
+function mulberry32(seed) { var s = seed | 0; return function() { s = (s | 0) + 0x6D2B79F5 | 0; var t = Math.imul(s ^ s >>> 15, s | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function isSameSeq(a, b) { var sa = SEQ_OF[a], sb = SEQ_OF[b]; if (!sa || !sb) return false; for (var i = 0; i < sa.length; i++) if (sb.indexOf(sa[i]) >= 0) return true; return false; }
+function digitSum(v) { v = Math.abs(v | 0); var s = 0; while (v > 0) { s += v % 10; v = (v / 10) | 0; } return s; }
+var GROUP_WEIGHT = 0.35;
+function predictFromRand(rand, prevSum) {
+    var product = rand * prevSum, scaled = Math.round(product * 1000), finalSum = digitSum(scaled);
+    var ftIdx = TYPE_INDEX[getTypeFromSum(finalSum)];
+    var scaled8 = Math.round(rand * 1e8), f3 = Math.floor((scaled8 % 1e8) / 1e5), rs = digitSum(f3);
+    var same = isSameSeq(rs, prevSum), g = same ? SAME_RULE[ftIdx] : DIFF_RULE[ftIdx];
+    var killIdx = 0; for (var t = 0; t < 4; t++) { if (g.indexOf(t) < 0) { killIdx = t; break; } }
+    var baseGroups = [INDEX_TYPE[g[0]], INDEX_TYPE[g[1]], INDEX_TYPE[g[2]]];
+    var weightFactor = (rand - Math.floor(rand)) * GROUP_WEIGHT, swapStep = Math.floor(weightFactor * 10) % 4;
+    var ordered = [baseGroups[0]];
+    if (swapStep === 0) ordered.push(baseGroups[1], baseGroups[2]);
+    else if (swapStep === 1) ordered.push(baseGroups[2], baseGroups[1]);
+    else if (swapStep === 2) ordered = [baseGroups[1], baseGroups[0], baseGroups[2]];
+    else ordered = [baseGroups[2], baseGroups[0], baseGroups[1]];
+    var finalKill = killIdx; if ((swapStep) % 4 === killIdx) finalKill = (killIdx + 1) % 4;
+    return { groups: ordered, kill: INDEX_TYPE[finalKill] };
+}
+function predictWithKill(prev, range) {
+    var period = parseInt(prev.expect, 10) || 0, salt = range.salt || 0;
+    var rnd = mulberry32(mixSeed(period ^ salt));
+    var rand = rnd() * (range.max - range.min) + range.min;
+    return predictFromRand(rand, prev.sum);
+}
+var MIN_LOW = 0.000, MIN_HIGH = 1.500, OFF_BASE = 0.100, OFF_TOP = 2.000, RAND_LIMIT = 6.001;
+var SALT_VALUES = [0, 0x9E3779B9, 0x85EBCA6B, 0x1B873593];
+function buildBacktestPairs(periods, limit) { var N = Math.min(periods.length - 1, limit || 20), pairs = new Array(N); for (var i = 0; i < N; i++) { pairs[i] = { prev: periods[i + 1], actual: periods[i] }; } return pairs; }
+function scanGrid(pairs, cfg, onProgress, onDone) {
+    if (!pairs || pairs.length === 0) { onDone && onDone(null); return; }
+    var step = cfg.step, minLow = cfg.minLow, minHigh = cfg.minHigh, offBase = cfg.offBase, offTop = cfg.offTop;
+    var minSlots = Math.floor((minHigh - minLow) / step) + 1, offSlots = Math.floor((offTop - offBase) / step) + 1, saltN = SALT_VALUES.length, totalCells = minSlots * offSlots * saltN;
+    var rndCache = [];
+    for (var s = 0; s < saltN; s++) { var salt = SALT_VALUES[s], arr = new Array(pairs.length); for (var k = 0; k < pairs.length; k++) { arr[k] = mulberry32(mixSeed(pairs[k].prev.expect ^ salt))(); } rndCache.push(arr); }
+    var pSums = pairs.map(function(p) { return p.prev.sum; }), aTypes = pairs.map(function(p) { return TYPE_INDEX[p.actual.type]; });
+    var n = pairs.length, best = null, t0 = performance.now(), doneCells = 0, CHUNK = 3000, ci = 0, cj = 0, cs = 0;
+    function runChunk() {
+        var cells = 0;
+        while (cells < CHUNK && ci < minSlots) {
+            var min = minLow + ci * step;
+            if (cj >= offSlots) { ci++; cj = 0; cs = 0; continue; }
+            var span = offBase + cj * step, max = min + span;
+            if (max > RAND_LIMIT) { ci++; cj = 0; cs = 0; continue; }
+            var hits = 0;
+            for (var k = 0; k < n; k++) {
+                var rand = rndCache[cs][k] * span + min, product = rand * pSums[k], scaled = Math.round(product * 1000);
+                var finalSum = digitSum(scaled), ftIdx = TYPE_INDEX[getTypeFromSum(finalSum)];
+                var scaled8 = Math.round(rand * 1e8), f3 = Math.floor((scaled8 % 1e8) / 1e5), rs = digitSum(f3);
+                var same = isSameSeq(rs, pSums[k]), g = same ? SAME_RULE[ftIdx] : DIFF_RULE[ftIdx];
+                var weightFactor = (rand - Math.floor(rand)) * GROUP_WEIGHT, swapStep = Math.floor(weightFactor * 10) % 4;
+                var baseGroups = [INDEX_TYPE[g[0]], INDEX_TYPE[g[1]], INDEX_TYPE[g[2]]], ordered;
+                if (swapStep === 0) ordered = [baseGroups[0], baseGroups[1], baseGroups[2]];
+                else if (swapStep === 1) ordered = [baseGroups[0], baseGroups[2], baseGroups[1]];
+                else if (swapStep === 2) ordered = [baseGroups[1], baseGroups[0], baseGroups[2]];
+                else ordered = [baseGroups[2], baseGroups[0], baseGroups[1]];
+                if (ordered.indexOf(INDEX_TYPE[aTypes[k]]) >= 0) hits++;
+            }
+            var rate = hits / n;
+            if (!best || rate > best.rate || (rate === best.rate && hits > best.hits)) { best = { min: min, max: max, salt: SALT_VALUES[cs], rate: rate, hits: hits, total: n }; }
+            cs++; if (cs >= saltN) { cs = 0; cj++; } cells++;
+        }
+        doneCells += cells;
+        if (onProgress) onProgress(Math.min(1, doneCells / totalCells), (performance.now() - t0) / 1000);
+        if (ci < minSlots) { setTimeout(runChunk, 0); } else { if (onDone) onDone(best); }
+    }
+    runChunk();
+}
+function scanBestRange(periods, step, onProgress, onDone) {
+    var pairs = buildBacktestPairs(periods, 20);
+    if (pairs.length === 0) { onDone && onDone(null); return; }
+    var t0 = performance.now(), userStep = step || 0.01, coarseStep = 0.05;
+    var coarseCfg = { minLow: MIN_LOW, minHigh: MIN_HIGH, offBase: OFF_BASE, offTop: OFF_TOP, step: coarseStep };
+    scanGrid(pairs, coarseCfg, function(p, el) { if (onProgress) onProgress(p * 0.7, el); }, function(b1) {
+        if (!b1) { onDone && onDone(null); return; }
+        var span1 = b1.max - b1.min, fineStep = Math.min(userStep, 0.01), pad = 0.03;
+        var fineCfg = { minLow: Math.max(MIN_LOW, b1.min - pad), minHigh: Math.min(MIN_HIGH, b1.min + pad), offBase: Math.max(OFF_BASE, span1 - pad), offTop: Math.min(OFF_TOP, span1 + pad), step: fineStep };
+        scanGrid(pairs, fineCfg, function(p, el) { if (onProgress) onProgress(0.7 + p * 0.3, (performance.now() - t0) / 1000); }, function(b2) { var best = b1; if (b2 && (b2.rate > best.rate || (b2.rate === best.rate && b2.hits > best.hits))) best = b2; onDone && onDone(best); });
+    });
+}
+
+// ============================================================
+// 数据源 & 网络请求
+// ============================================================
+var API_URL = 'https://pc28.help/api/kj.json?nbr=100';
+var PROXY_URLS = [
+    'https://api.allorigins.win/get?url=',
+    'https://corsproxy.io/?'
+];
+var STORAGE_KEY = 'star_media_history_v1';
+var FETCH_TIMEOUT = 3000;
+
+var FALLBACK_PERIODS = [
+    {expect:20261017001, num1:5, num2:12, num3:8, sum:25, type:'大单', date:'2026-10-17', time:'00:03:00'},
+    {expect:20261017002, num1:3, num2:7, num3:10, sum:20, type:'大双', date:'2026-10-17', time:'00:06:00'},
+    {expect:20261017003, num1:9, num2:4, num3:6, sum:19, type:'大单', date:'2026-10-17', time:'00:09:00'},
+    {expect:20261017004, num1:2, num2:14, num3:5, sum:21, type:'大单', date:'2026-10-17', time:'00:12:00'},
+    {expect:20261017005, num1:11, num2:3, num3:9, sum:23, type:'大单', date:'2026-10-17', time:'00:15:00'},
+    {expect:20261017006, num1:6, num2:8, num3:7, sum:21, type:'大单', date:'2026-10-17', time:'00:18:00'},
+    {expect:20261017007, num1:4, num2:10, num3:12, sum:26, type:'大双', date:'2026-10-17', time:'00:21:00'},
+    {expect:20261017008, num1:8, num2:5, num3:3, sum:16, type:'大双', date:'2026-10-17', time:'00:24:00'},
+    {expect:20261017009, num1:7, num2:9, num3:2, sum:18, type:'大双', date:'2026-10-17', time:'00:27:00'},
+    {expect:20261017010, num1:1, num2:13, num3:11, sum:25, type:'大单', date:'2026-10-17', time:'00:30:00'},
+    {expect:20261017011, num1:10, num2:2, num3:8, sum:20, type:'大双', date:'2026-10-17', time:'00:33:00'},
+    {expect:20261017012, num1:12, num2:6, num3:4, sum:22, type:'大双', date:'2026-10-17', time:'00:36:00'},
+    {expect:20261017013, num1:3, num2:11, num3:7, sum:21, type:'大单', date:'2026-10-17', time:'00:39:00'},
+    {expect:20261017014, num1:5, num2:8, num3:14, sum:27, type:'大单', date:'2026-10-17', time:'00:42:00'},
+    {expect:20261017015, num1:9, num2:3, num3:6, sum:18, type:'大双', date:'2026-10-17', time:'00:45:00'},
+    {expect:20261017016, num1:2, num2:10, num3:9, sum:21, type:'大单', date:'2026-10-17', time:'00:48:00'},
+    {expect:20261017017, num1:13, num2:1, num3:5, sum:19, type:'大单', date:'2026-10-17', time:'00:51:00'},
+    {expect:20261017018, num1:7, num2:12, num3:3, sum:22, type:'大双', date:'2026-10-17', time:'00:54:00'},
+    {expect:20261017019, num1:4, num2:6, num3:11, sum:21, type:'大单', date:'2026-10-17', time:'00:57:00'},
+    {expect:20261017020, num1:8, num2:9, num3:7, sum:24, type:'大双', date:'2026-10-17', time:'01:00:00'}
+];
+
+function xhrGet(url, timeout) {
+    return new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest(), settled = false;
+        var timer = setTimeout(function() {
+            if (!settled) { settled = true; try{xhr.abort();}catch(e){} reject(new Error('请求超时')); }
+        }, timeout || FETCH_TIMEOUT);
+        xhr.open('GET', url, true);
+        xhr.timeout = timeout || FETCH_TIMEOUT;
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4 || settled) return;
+            settled = true; clearTimeout(timer);
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try { resolve(JSON.parse(xhr.responseText)); } catch(e) { reject(new Error('数据解析失败')); }
+            } else { reject(new Error('HTTP ' + xhr.status)); }
+        };
+        xhr.onerror = function() { if (!settled) { settled = true; clearTimeout(timer); reject(new Error('网络错误')); } };
+        xhr.onabort = function() { if (!settled) { settled = true; clearTimeout(timer); reject(new Error('请求中止')); } };
+        xhr.send();
+    });
+}
+
+function parseBalls(numberStr) { return String(numberStr).split('+').map(function(n) { return parseInt(n, 10) || 0; }); }
+
+function parsePrimary(json) {
+    if (!json || !json.data || !Array.isArray(json.data) || json.data.length === 0) throw new Error('主源数据格式异常');
+    var periods = json.data.map(function(item) {
+        var balls = parseBalls(item.number), sum = parseInt(item.num, 10) || (balls[0]+balls[1]+balls[2]);
+        return { expect: parseInt(item.nbr, 10), num1: balls[0], num2: balls[1], num3: balls[2], sum: sum, type: getTypeFromSum(sum), date: item.date, time: item.time };
+    });
+    return { countdown: json.countdown || '', periods: periods };
+}
+
+function fetchKjData() {
+    return new Promise(function(resolve, reject) {
+        var sources = [{ name: '直连', url: API_URL }];
+        PROXY_URLS.forEach(function(pu, i) { sources.push({ name: '代理'+(i+1), url: pu + encodeURIComponent(API_URL) }); });
+        function tryNext(idx) {
+            if (idx >= sources.length) {
+                if (currentPeriods && currentPeriods.length) {
+                    showToast('数据源暂不可用，展示缓存数据');
+                    resolve({ countdown: currentCountdown || '', periods: currentPeriods, sourceName: '缓存' });
+                    return;
+                }
+                showToast('网络异常，使用离线数据');
+                resolve({ countdown: '01:30', periods: FALLBACK_PERIODS, sourceName: '离线' });
+                return;
+            }
+            var src = sources[idx];
+            xhrGet(src.url, FETCH_TIMEOUT).then(function(raw) {
+                var json;
+                if (src.name !== '直连') { json = raw.contents ? JSON.parse(raw.contents) : raw; }
+                else { json = raw; }
+                var data = parsePrimary(json);
+                data.sourceName = src.name;
+                resolve(data);
+            }).catch(function(e) { tryNext(idx + 1); });
+        }
+        tryNext(0);
+    }).then(function(data) { return data; }, function(err) {
+        if (currentPeriods && currentPeriods.length) {
+            showToast('数据源暂不可用，展示缓存数据');
+            return { countdown: currentCountdown || '', periods: currentPeriods, sourceName: '缓存' };
+        }
+        showToast('网络异常，使用离线数据');
+        return { countdown: '01:30', periods: FALLBACK_PERIODS, sourceName: '离线' };
+    });
+}
+
+// ============================================================
+// 运行自检
+// ============================================================
+function diag(msg, cls) { var body = document.getElementById('diagBody'); if (!body) return; var c = cls === true ? ' diag-ok' : (cls === false ? ' diag-bad' : ''); var row = document.createElement('div'); row.className = 'diag-row' + c; row.textContent = msg; body.appendChild(row); }
+function toggleDiag() { var body = document.getElementById('diagBody'); if (body) body.style.display = body.style.display === 'none' ? '' : 'none'; }
+function diagClear() { var body = document.getElementById('diagBody'); if (body) body.innerHTML = ''; }
+function runDiagProbes() {
+    diag('① 连接 VPN 中…', true);
+    setTimeout(function() {
+        diag('② 连接 ChatGPT AI 服务器…', true);
+        setTimeout(function() {
+            diag('③ JS 脚本已运行：' + new Date().toTimeString().slice(0,8), true);
+            try { localStorage.setItem('__diag_t','1'); localStorage.removeItem('__diag_t'); diag('④ localStorage 可用', true); } catch(e) { diag('④ localStorage 不可用', false); }
+            diag('⑤ 探测数据源...');
+            probeSource('pc28.help', API_URL, FETCH_TIMEOUT, function(name, ok, msg) {
+                diag('   源 ' + name + '：' + msg, ok);
+                diag('⑥ 探测完成', ok);
+            });
+        }, 400);
+    }, 400);
+}
+function probeSource(name, url, timeoutMs, cb) {
+    var t0 = Date.now(), xhr = new XMLHttpRequest(), settled = false;
+    var timer = setTimeout(function() { if (settled) return; settled = true; try{xhr.abort();}catch(e){} cb(name, false, '超时', Date.now()-t0); }, timeoutMs || FETCH_TIMEOUT);
+    xhr.open('GET', url, true); xhr.timeout = timeoutMs || FETCH_TIMEOUT;
+    xhr.onreadystatechange = function() { if (xhr.readyState !== 4 || settled) return; settled = true; clearTimeout(timer); if (xhr.status === 200) cb(name, true, 'HTTP 200 · '+(Date.now()-t0)+'ms', Date.now()-t0); else cb(name, false, 'HTTP '+xhr.status, Date.now()-t0); };
+    xhr.onerror = function() { if (!settled) { settled = true; clearTimeout(timer); cb(name, false, '网络错误', Date.now()-t0); } };
+    xhr.send();
+}
+
+// ============================================================
+// 全局状态
+// ============================================================
+var currentPeriods = null, currentRange = null, currentCountdown = '', countdownTimer = null, countdownDestroyed = false, lastFetchAt = 0;
+function runBacktest(periods, range, limit) {
+    limit = limit === undefined ? 20 : limit; var results = [];
+    var N = Math.min(periods.length - 1, limit);
+    for (var i = 0; i < N; i++) { var prev = periods[i + 1], actual = periods[i]; var pred = predictWithKill(prev, range); results.push({ expect: actual.expect, prevBalls: prev.num1+'+'+prev.num2+'+'+prev.num3, prevSum: prev.sum, groups: pred.groups, kill: pred.kill, actualBalls: actual.num1+'+'+actual.num2+'+'+actual.num3, actualSum: actual.sum, actualType: actual.type, hit: pred.groups.indexOf(actual.type) >= 0 }); }
+    return results;
+}
+function renderHistoryTable(results) {
+    var list = document.getElementById('historyList'), acc = document.getElementById('accuracyInfo');
+    if (!list) return; if (!results || results.length === 0) { list.innerHTML = '<div class="history-item"><div class="history-row">暂无回测数据</div></div>'; if (acc) acc.innerHTML = '命中率: <span>--</span>'; return; }
+    var hits = 0; for (var i = 0; i < results.length; i++) if (results[i].hit) hits++;
+    var rate = ((hits / results.length) * 100).toFixed(1);
+    if (acc) acc.innerHTML = '命中率: <span>'+rate+'% ('+hits+'/'+results.length+')</span>';
+    var html = '';
+    for (var j = 0; j < results.length; j++) { var r = results[j], cls = r.hit ? 'tag-correct' : 'tag-wrong', mark = r.hit ? '✓ 命中' : '✗ 未中'; html += '<div class="history-item"><div class="history-row"><span class="history-tag '+cls+'">'+mark+'</span><span>'+r.expect+'期</span> <span>预测: '+r.groups.join(' · ')+' 杀'+r.kill+'</span> <span>实开: '+r.actualBalls+' 和'+r.actualSum+' '+r.actualType+'</span></div></div>'; }
+    list.innerHTML = html;
+}
+function renderLatest(periods, countdownStr) {
+    if (!periods || !periods.length) return;
+    var latest = periods[0];
+    var b1 = document.getElementById('ball1'), b2 = document.getElementById('ball2'), b3 = document.getElementById('ball3');
+    if (b1) b1.textContent = latest.num1; if (b2) b2.textContent = latest.num2; if (b3) b3.textContent = latest.num3;
+    var lp = document.getElementById('latestPeriod'); if (lp) lp.textContent = latest.expect + '期';
+    var ls = document.getElementById('latestSum'); if (ls) ls.textContent = latest.sum;
+    var lt = document.getElementById('latestType'); if (lt) lt.textContent = latest.type;
+    if (!countdownTimer && !countdownDestroyed) startCountdown(countdownStr);
+}
+function generateRecordText(pred, expect, fmt) {
+    var poolStr = pred.groups.join('');
+    switch (fmt) {
+        case '0': return '杀'+pred.kill+' | 三门'+poolStr; case '1': return poolStr; case '2': return '杀'+pred.kill+'🔥'+poolStr;
+        case '3': return (expect||'----')+'期 杀'+pred.kill+' | 三门'+poolStr; case '4': return poolStr;
+        default: return '杀'+pred.kill+' | 三门'+poolStr;
+    }
+}
+function renderPrediction(periods, range) {
+    if (!periods || !periods.length || !range) return null;
+    var prev = periods[0], pred = predictWithKill(prev, range);
+    var sv = document.getElementById('seedValue'); if (sv) sv.textContent = '本期杀' + pred.kill;
+    var g1 = document.getElementById('group1'); if (g1) g1.textContent = pred.groups.join('');
+    var kr = document.getElementById('killResult'); if (kr) kr.textContent = '杀 ' + pred.kill;
+    var cells = document.querySelectorAll('#poolGrid .predict-cell');
+    if (cells.length >= 3) { cells[0].querySelector('.cell-value').textContent = pred.groups[0]; cells[1].querySelector('.cell-value').textContent = pred.groups[1]; cells[2].querySelector('.cell-value').textContent = pred.groups[2]; }
+    var rt = document.getElementById('rangeText'); if (rt) rt.textContent = range.min.toFixed(3)+'~'+range.max.toFixed(3);
+    var results = runBacktest(periods, range, 20);
+    var st = document.getElementById('rateText'); if (st) { if (results.length > 0) { var hits = 0; for (var i=0;i<results.length;i++) if (results[i].hit) hits++; st.textContent = ((hits/results.length)*100).toFixed(1)+'%'; } else st.textContent = '--'; }
+    var fmtEl = document.getElementById('formatSelect'), recEl = document.getElementById('recordText');
+    if (fmtEl && recEl) recEl.value = generateRecordText(pred, prev.expect, fmtEl.value || '0');
+    return pred;
+}
+function renderRankList(periods, currentRange) {
+    var container = document.getElementById('specialCodesContainer'); if (!container) return;
+    if (!periods || periods.length < 2) { container.innerHTML = '<div class="cloud-tag">等待计算...</div>'; return; }
+    var base = currentRange || { min: 0.1, max: 0.9, salt: 0 };
+    var spans = [{label:'极窄',min:Math.max(0.01,base.min-0.04),max:base.max-0.12},{label:'窄',min:Math.max(0.01,base.min-0.02),max:base.max-0.06},{label:'标准',min:base.min,max:base.max},{label:'宽',min:Math.max(0.01,base.min-0.03),max:base.max+0.08},{label:'极宽',min:Math.max(0.01,base.min-0.05),max:Math.min(RAND_LIMIT,base.max+0.15)}];
+    for (var s=0;s<spans.length;s++) if (spans[s].max-spans[s].min<0.05) spans[s].max=spans[s].min+0.05;
+    var html = '';
+    for (var idx=0;idx<spans.length;idx++) {
+        var rng = {min:spans[idx].min,max:spans[idx].max,salt:base.salt||0}, accText='--';
+        if (periods.length>1) { var res=runBacktest(periods,rng,20); if(res.length>0){var h=0;for(var k=0;k<res.length;k++)if(res[k].hit)h++; accText=((h/res.length)*100).toFixed(0)+'%';} }
+        var active = (idx===2)?' style="border-color:var(--accent);color:var(--accent);"':'';
+        html += '<div class="cloud-tag"'+active+' data-idx="'+idx+'" data-min="'+spans[idx].min+'" data-max="'+spans[idx].max+'">'+spans[idx].label+' '+spans[idx].min.toFixed(2)+'~'+spans[idx].max.toFixed(2)+' · '+accText+'</div>';
+    }
+    container.innerHTML = html;
+    var tagEls = container.querySelectorAll('.cloud-tag');
+    for (var t=0;t<tagEls.length;t++) { (function(el){ el.addEventListener('click',function(){ var min=parseFloat(el.dataset.min),max=parseFloat(el.dataset.max),salt=(currentRange&&currentRange.salt)||0; currentRange={min:min,max:max,salt:salt}; var all=container.querySelectorAll('.cloud-tag'); for(var j=0;j<all.length;j++){all[j].style.borderColor='';all[j].style.color='';} el.style.borderColor='var(--accent)';el.style.color='var(--accent)'; renderPrediction(periods,currentRange); renderRankList(periods,currentRange); renderHistoryTable(runBacktest(periods,currentRange,20)); showToast('已切换到 '+min.toFixed(3)+' ~ '+max.toFixed(3)); }); })(tagEls[t]); }
+}
+function showToast(msg) { var el = document.getElementById('toast'); if (!el) return; el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(function(){el.classList.remove('show');}, 2200); }
+function stopCountdown() { countdownDestroyed = true; if (countdownTimer) { clearTimeout(countdownTimer); countdownTimer = null; } }
+function startCountdown(countdownStr) {
+    stopCountdown(); countdownDestroyed = false; currentCountdown = countdownStr;
+    var el = document.getElementById('countdownText'); if (!el) return;
+    if (!countdownStr || !/\d+:\d+/.test(countdownStr)) { el.textContent = '等待开盘...'; return; }
+    var parts = countdownStr.split(':');
+    var total = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    if (total <= 0) total = 90;
+    var targetTs = Date.now() + total * 1000;
+    function tick() {
+        if (countdownDestroyed) return;
+        var remain = Math.ceil((targetTs - Date.now()) / 1000);
+        if (remain <= 0) { el.textContent = '正在开奖...'; countdownTimer = null; setTimeout(function () { if (!countdownDestroyed) refreshAll(true); }, 3000); return; }
+        var mm = ('0' + Math.floor(remain / 60)).slice(-2), ss = ('0' + (remain % 60)).slice(-2);
+        el.textContent = '距下期开奖 ' + mm + ':' + ss;
+        countdownTimer = setTimeout(tick, 1000);
+    }
+    tick();
+}
+function refreshAll(force) {
+    var list = document.getElementById('historyList'); if (list) list.innerHTML = '<div class="history-item"><div class="history-row">⏳ 正在获取数据，请稍候...</div></div>';
+    loadData(force).then(function(periods) {
+        if (!periods || periods.length < 2) { if (list) list.innerHTML = '<div class="history-item"><div class="history-row">数据不足，请稍后重试</div></div>'; return; }
+        renderLatest(periods, currentCountdown);
+        if (!currentRange) { currentRange = { min: 0.1, max: 0.9, salt: 0 }; }
+        renderPrediction(periods, currentRange); renderRankList(periods, currentRange); renderHistoryTable(runBacktest(periods, currentRange, 20));
+    }).catch(function(e) {
+        console.error(e);
+        if (list) list.innerHTML = '<div class="history-item"><div class="history-row">❌ 数据加载失败：'+(e.message||e)+'<br>请检查网络连接后重试</div></div>';
+        showToast('数据加载失败，请检查网络');
+    });
+}
+function onScanClick() {
+    if (!currentPeriods || currentPeriods.length < 2) { showToast('暂无数据，请稍后重试'); return; }
+    var btn = document.getElementById('scanBtn'), prog = document.getElementById('scanProgress'), bar = document.getElementById('scanBar'), pct = document.getElementById('scanPct'), timerEl = document.getElementById('scanTimer');
+    if (!btn || !prog || !bar) return; btn.disabled = true; prog.classList.add('show'); bar.style.width = '0%';
+    if (pct) pct.textContent = '0%'; if (timerEl) timerEl.textContent = '0.0s';
+    var step = parseFloat(document.getElementById('stepSelect').value) || 0.01;
+    diagClear(); diag('手动反推：步长 '+step, true);
+    setTimeout(function() {
+        scanBestRange(currentPeriods, step, function(p, elapsed) { bar.style.width = (p*100).toFixed(0)+'%'; if (pct) pct.textContent = (p*100).toFixed(0)+'%'; if (timerEl) timerEl.textContent = elapsed.toFixed(1)+'s'; }, function(best) {
+            btn.disabled = false; setTimeout(function(){prog.classList.remove('show');}, 500);
+            if (!best) { showToast('未找到合适区间'); diag('反推结束：未找到合适区间', false); return; }
+            currentRange = {min:best.min,max:best.max,salt:best.salt}; renderPrediction(currentPeriods, currentRange); renderRankList(currentPeriods, currentRange); renderHistoryTable(runBacktest(currentPeriods, currentRange, 20));
+            showToast('已找到最优区间 '+best.min.toFixed(3)+'~'+best.max.toFixed(3)+' 命中 '+(best.rate*100).toFixed(1)+'%');
+            diag('反推完成：'+best.min.toFixed(3)+'~'+best.max.toFixed(3)+' 命中 '+(best.rate*100).toFixed(1)+'%', true);
+        });
+    }, 50);
+}
+function doCopy() { var el = document.getElementById('recordText'); if (!el || !el.value) { showToast('暂无内容可复制'); return; } var text = el.value; if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(function(){showToast('已复制');},function(){fallbackCopy(text);}); } else fallbackCopy(text); }
+function fallbackCopy(text) { try { var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('已复制'); } catch(e) { showToast('复制失败'); } }
+function saveCache(periods, countdown) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify({t:Date.now(),countdown:countdown||'',periods:periods})); } catch(e){} }
+function loadCache() { try { var raw=localStorage.getItem(STORAGE_KEY); if(!raw) return null; var obj=JSON.parse(raw); if(obj&&obj.periods&&obj.periods.length) return obj; } catch(e){} return null; }
+function loadData(force) {
+    var now = Date.now(); if (!force && currentPeriods && (now - lastFetchAt) < 5000) return Promise.resolve(currentPeriods);
+    var cache = loadCache();
+    if (cache && cache.periods && cache.periods.length) {
+        currentPeriods = cache.periods; currentCountdown = cache.countdown || '';
+        fetchKjData().then(function(data) { currentPeriods = data.periods; currentCountdown = data.countdown; lastFetchAt = Date.now(); saveCache(currentPeriods, currentCountdown); renderLatest(currentPeriods, currentCountdown); }).catch(function(){});
+        return Promise.resolve(currentPeriods);
+    }
+    return fetchKjData().then(function(data) { currentPeriods = data.periods; currentCountdown = data.countdown; lastFetchAt = Date.now(); saveCache(currentPeriods, currentCountdown); return currentPeriods; });
+}
+
+// ============================================================
+// 启动
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    initLogin();
+    var scanBtn = document.getElementById('scanBtn'); if (scanBtn) scanBtn.addEventListener('click', onScanClick);
+    var pb = document.getElementById('predictBtn'); if (pb) pb.addEventListener('click', function(){refreshAll(true);});
+    var cb = document.getElementById('copyBtn'); if (cb) cb.addEventListener('click', doCopy);
+    var fmt = document.getElementById('formatSelect'); if (fmt) fmt.addEventListener('change', function(){ if(currentPeriods&&currentPeriods.length>0&&currentRange){ var pred=predictWithKill(currentPeriods[0],currentRange); var rec=document.getElementById('recordText'); if(rec) rec.value=generateRecordText(pred,currentPeriods[0].expect,this.value||'0'); }});
+    var chb = document.getElementById('clearHistoryBtn'); if (chb) chb.addEventListener('click', function(){ renderHistoryTable([]); showToast('已清空记录显示'); });
+    var themeBtn = document.getElementById('themeBtn'); if (themeBtn) themeBtn.addEventListener('click', function(){ var cur=document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme',cur==='light'?'dark':'light'); });
+    var logoutBtn = document.getElementById('logoutBtn'); if (logoutBtn) logoutBtn.addEventListener('click', function(){ if(confirm('确定要退出登录吗？')){ localStorage.removeItem(LOGIN_KEY); location.reload(); } });
+    setInterval(function(){refreshAll(true);}, 30000);
+});
+window.addEventListener('beforeunload', stopCountdown);
+</script>
+</body>
+</html>
